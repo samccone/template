@@ -253,6 +253,8 @@ export class TemplateTranspiler {
     this.currentContext = {
       localVars: new Set(),
       domRepeatVar: undefined,
+      nestedIfLevel: 0,
+      expressionToVarName: new Map(),
     };
   }
 
@@ -293,7 +295,8 @@ export class TemplateTranspiler {
   public transpilePolymerExpression(expression: PolymerExpression): string {
     return TsExpressionGenerator.fromPolymerExpresion(
       expression,
-      this.currentContext.localVars
+      this.currentContext.localVars,
+      this.currentContext.expressionToVarName
     );
   }
 
@@ -304,6 +307,7 @@ export class TemplateTranspiler {
     tsExpression: string;
     reverseBindingExpression: string;
     negotiation?: boolean;
+    methodCall?: boolean;
     stringExpression: string;
     whitespacesOnly: boolean;
   } {
@@ -350,6 +354,10 @@ export class TemplateTranspiler {
       parseResult.expression.type === SyntaxNodeKind.Negation
         ? this.transpilePolymerExpression(parseResult.expression.operand)
         : tsExpression;
+    const methodCall =
+      parseResult.expression.type === SyntaxNodeKind.MethodCall ||
+      (parseResult.expression.type === SyntaxNodeKind.Negation &&
+        parseResult.expression.operand.type === SyntaxNodeKind.MethodCall);
     return {
       attrValueType:
         bindingParts[0].bindingType === BindingType.OneWay
@@ -358,6 +366,7 @@ export class TemplateTranspiler {
       tsExpression,
       reverseBindingExpression,
       negotiation: parseResult.expression.type === SyntaxNodeKind.Negation,
+      methodCall,
       stringExpression: '`${' + tsExpression + '}`',
       whitespacesOnly: false,
     };
@@ -374,12 +383,32 @@ export class TemplateTranspiler {
     if (update.localVars) {
       update.localVars.forEach(val => this.currentContext.localVars.add(val));
     }
+    if (update.nestedIfLevel) {
+      this.currentContext.nestedIfLevel = update.nestedIfLevel;
+    }
+    if (update.expressionToVarName) {
+      for (const [
+        expression,
+        varName,
+      ] of update.expressionToVarName.entries()) {
+        const existingVarName = this.currentContext.expressionToVarName.get(
+          expression
+        );
+        if (existingVarName && existingVarName !== varName)
+          throw new Error(
+            `Internal error! Expression '${expression}' already assigned to a different variable`
+          );
+        this.currentContext.expressionToVarName.set(expression, varName);
+      }
+    }
   }
 
   pushContext(): void {
     const newContext: TranspilerContext = {
       localVars: new Set<string>(this.currentContext.localVars),
       domRepeatVar: this.currentContext.domRepeatVar,
+      nestedIfLevel: this.currentContext.nestedIfLevel,
+      expressionToVarName: new Map(this.currentContext.expressionToVarName),
     };
     this.contextStack.push(this.currentContext);
     this.currentContext = newContext;

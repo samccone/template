@@ -235,10 +235,20 @@ export class CodeBuilder {
     this.addLine('}');
   }
 
-  beginElement(tagName: string) {
+  beginElement(tagName: string, id?: string) {
     this.startBlock();
     // Even if there is no attribute, it make sence to check that tagName is registered in HTMLElementTagNameMap
-    this.addLine(`const el: HTMLElementTagNameMap['${tagName}'] = null!;`);
+    if (id) {
+      // If an element in template has id, the $ property of templated element
+      // can provide more precise type information. __getElementByIdOrTag
+      // returns the type of the element in the $ property if it is defined,
+      // otherwise returns the type from the HTMLElementTagNameMap.
+      this.addLine(
+        `const el = __getElementByIdOrTag(__templatedElement.$, '${id}', '${tagName}');`
+      );
+    } else {
+      this.addLine(`const el: HTMLElementTagNameMap['${tagName}'] = null!;`);
+    }
     this.addLine('useVars(el);');
   }
 

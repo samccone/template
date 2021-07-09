@@ -266,7 +266,7 @@ export class OrdinaryTagTranspiler implements ElementTranspiler {
     element: CheerioElement,
     attrFilter?: AttributeFilter
   ) {
-    builder.beginElement(this.getActualTagName(element));
+    builder.beginElement(this.getActualTagName(element), element.attribs['id']);
     for (const [attrName, attrValue] of Object.entries(element.attribs)) {
       if (attrName === 'is') continue;
       if (attrFilter && !attrFilter(attrName, attrValue)) continue;

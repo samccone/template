@@ -286,6 +286,10 @@ function generateFile(
     if (element.template) {
       const parsed = Cheerio.parseHTML(element.template.content);
       if (parsed) {
+        builder.addLine(
+          `const __templatedElement: HTMLElementTagNameMap['${element.tag}'] = null!`
+        );
+        builder.addLine('useVars(__templatedElement)');
         // if content is empty string, the parsed is null
         createTranspiler(builder, elementsProperties).transpile(
           sourceFile,

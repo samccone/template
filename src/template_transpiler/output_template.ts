@@ -256,6 +256,18 @@ declare function pc<T>(obj: T): PolymerDeepPropertyChange<T, T>;
 
 declare function convert<T, U extends T>(obj: T): U;
 
+/**
+* __getElementByIdOrTag returns the type of element by id if available;
+* overwise returns the type of element by tag name.
+*/
+declare function __getElementByIdOrTag<
+    T extends { [key: string]: Element; },
+    KId extends keyof T | string,
+    KTag extends keyof HTMLElementTagNameMap>($: T, id: KId, tag: KTag):
+    KId extends keyof T ?
+      T[KId] & HTMLElementTagNameMap[KTag] : 
+      HTMLElementTagNameMap[KTag];
+
 ${content}
 `;
 }

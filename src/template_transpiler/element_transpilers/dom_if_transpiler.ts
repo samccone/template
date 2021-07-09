@@ -246,9 +246,32 @@ export class DomIfElementTranspiler extends OrdinaryTagTranspiler {
         `The "if" attrubute value '${condition}' must be a single binding expression.`
       );
     }
-    builder.addLine(`if (${tsCondition.tsExpression})`);
+    if (tsCondition.methodCall) {
+      builder.addLine(`if (${tsCondition.tsExpression})`);
+    } else {
+      const tsExpression = tsCondition.tsExpression;
+      const nestedIfLevel = transpiler.getCurrentContext().nestedIfLevel;
+      builder.startBlock();
+      let varName = transpiler
+        .getCurrentContext()
+        .expressionToVarName.get(tsExpression);
+      if (!varName) {
+        varName = `__condition${nestedIfLevel}`;
+        builder.addLine(`const ${varName} = ${tsCondition.tsExpression};`);
+      }
+      builder.addLine(`if (${varName})`);
+      transpiler.pushContext();
+      transpiler.updateCurrentContext({
+        nestedIfLevel: nestedIfLevel + 1,
+        expressionToVarName: new Map([[tsCondition.tsExpression, varName]]),
+      });
+    }
     builder.startBlock();
     transpiler.transpileChildNodes(file, element);
     builder.endBlock();
+    if (!tsCondition.methodCall) {
+      transpiler.popContext();
+      builder.endBlock();
+    }
   }
 }

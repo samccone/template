@@ -205,8 +205,11 @@
  */
 
 export type LocalVars = Set<string>;
+export type MapExpressionToVarName = Map<string, string>;
 
 export interface TranspilerContext {
   localVars: LocalVars;
   domRepeatVar?: string;
+  nestedIfLevel: number;
+  expressionToVarName: MapExpressionToVarName;
 }

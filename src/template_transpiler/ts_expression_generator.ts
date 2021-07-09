@@ -214,19 +214,28 @@ import {
   WildcardPathExpression,
 } from '../expression_parser/expression_parser';
 import {PolymerSyntaxNodeVisitor, visitSyntaxNode} from './syntax_node_visitor';
-import {LocalVars} from './context';
+import {LocalVars, MapExpressionToVarName} from './context';
 
 export class TsExpressionGenerator implements PolymerSyntaxNodeVisitor<string> {
   public static fromPolymerExpresion(
     expression: PolymerExpression,
-    localVars: LocalVars
+    localVars: LocalVars,
+    expressionToVarName: MapExpressionToVarName
   ): string {
-    return visitSyntaxNode(expression, new TsExpressionGenerator(localVars));
+    return visitSyntaxNode(
+      expression,
+      new TsExpressionGenerator(localVars, expressionToVarName)
+    );
   }
-  private constructor(private readonly localVars: LocalVars) {}
+  private constructor(
+    private readonly localVars: LocalVars,
+    private readonly expressionToVarName: MapExpressionToVarName
+  ) {}
   visitIdentifier(node: Identifier, propertyAccess?: boolean): string {
     const addThis = !propertyAccess && !this.localVars.has(node.name);
-    return addThis ? `this.${node.name}` : `${node.name}`;
+    return this.getVarNameOrExpression(
+      addThis ? `this.${node.name}` : `${node.name}`
+    );
   }
 
   visitLiteral(node: LiteralExpression): string {
@@ -237,21 +246,31 @@ export class TsExpressionGenerator implements PolymerSyntaxNodeVisitor<string> {
     const args = node.arguments.map(argument =>
       visitSyntaxNode(argument, this)
     );
-    return `${visitSyntaxNode(node.expression, this)}(${args.join(', ')})`;
+    return this.getVarNameOrExpression(
+      `${visitSyntaxNode(node.expression, this)}(${args.join(', ')})`
+    );
   }
 
   visitNegation(node: NegationExpression): string {
-    return `!${visitSyntaxNode(node.operand, this)}`;
+    return this.getVarNameOrExpression(
+      `!${visitSyntaxNode(node.operand, this)}`
+    );
   }
 
   visitPropertyAccess(node: PropertyAccessExpression): string {
-    return (
+    return this.getVarNameOrExpression(
       `__f(${visitSyntaxNode(node.expression, this)})!.` +
-      this.visitIdentifier(node.name, true)
+        this.visitIdentifier(node.name, true)
     );
   }
 
   visitWildcardPath(node: WildcardPathExpression): string {
-    return `pc(${visitSyntaxNode(node.expression, this)})`;
+    return this.getVarNameOrExpression(
+      `pc(${visitSyntaxNode(node.expression, this)})`
+    );
+  }
+
+  private getVarNameOrExpression(expr: string): string {
+    return this.expressionToVarName.get(expr) ?? expr;
   }
 }
