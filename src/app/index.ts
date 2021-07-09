@@ -264,7 +264,7 @@ twinkie --tsconfig tsconfig.json --outdir output_dir [--files file_list] [--outt
         incremental: false,
         noEmit: true,
       },
-      files: [...allProgramFilesNames, generatedFiles],
+      files: [...allProgramFilesNames, ...generatedFiles],
     };
     fs.writeFileSync(
       cmdLineOptions.outputTsConfig,
